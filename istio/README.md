@@ -1,4 +1,9 @@
 # Installation
 ```bash
-bash install.bash
+make install
+```
+
+# Uninstallation
+```bash
+make uninstall
 ```
