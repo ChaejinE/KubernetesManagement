@@ -35,6 +35,18 @@ uninstall-istioGateway:
 	echo "Uninstall IstioGateway"
 	helm uninstall istio-ingress -n istio-system
 
+install-addons:
+	kubectl apply -f istio/samples/addons/grafana.yaml -n istio-system
+	kubectl apply -f istio/samples/addons/prometheus.yaml -n istio-system
+	kubectl apply -f istio/samples/addons/jaeger.yaml -n istio-system
+	kubectl apply -f istio/samples/addons/kiali.yaml -n istio-system
+
+uninstall-addons:
+	kubectl delete -f istio/samples/addons/grafana.yaml -n istio-system
+	kubectl delete -f istio/samples/addons/prometheus.yaml -n istio-system
+	kubectl delete -f istio/samples/addons/jaeger.yaml -n istio-system
+	kubectl delete -f istio/samples/addons/kiali.yaml -n istio-system
+
 setup-kiali:
 	helm repo add kiali https://kiali.org/helm-charts
 	helm repo update kiali
@@ -105,5 +117,5 @@ extract-label:
 	echo "After"
 	kubectl describe ns ${NAMESPACE}
 
-install: setup install-CRDs install-istiod install-istioGateway install-kiali install-grafana install-prometheus
-uninstall: setup uninstall-CRDs uninstall-istiod uninstall-istioGateway uninstall-kiali uninstall-grafana uninstall-prometheus
+install: setup install-CRDs install-istiod install-istioGateway install-addons
+uninstall: setup uninstall-CRDs uninstall-istiod uninstall-istioGateway uninstall-addons

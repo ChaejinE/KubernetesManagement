@@ -1,0 +1,3 @@
+[submodule "istio/istio"]
+	path = istio/istio
+	url = https://github.com/istio/istio.git
