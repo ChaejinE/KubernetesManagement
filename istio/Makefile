@@ -26,15 +26,25 @@ uninstall-istiod:
 	echo "Uninstall istiod"
 	helm uninstall istiod -n istio-system
 
-install-istioGateway:
-	echo "Install IstioGateway"
-	helm upgrade istio-ingress istio/gateway \
+install-istioIngressGateway:
+	echo "Install istioIngressGateway"
+	helm upgrade istio-ingressgateway istio/manifests/charts/gateways/istio-ingress \
 		-n istio-system --create-namespace \
     	--install
 
-uninstall-istioGateway:
-	echo "Uninstall IstioGateway"
+uninstall-istioIngressGateway:
+	echo "Uninstall istioIngressGateway"
 	helm uninstall istio-ingress -n istio-system
+
+install-istioEgressGateway:
+	echo "Install istioEgressGateway"
+	helm upgrade istio-egressgateway istio/manifests/charts/gateways/istio-egress \
+		-n istio-system --create-namespace \
+    	--install
+
+uninstall-istioEgressGateway:
+	echo "Uninstall istioEgressGateway"
+	helm uninstall istio-egressgateway -n istio-system
 
 install-addons:
 	kubectl apply -f istio/samples/addons/grafana.yaml -n istio-system
@@ -115,5 +125,5 @@ extract-label:
 	echo "After"
 	kubectl describe ns ${NAMESPACE}
 
-install: setup install-CRDs install-istiod install-istioGateway install-addons inject-label
-uninstall: setup uninstall-CRDs uninstall-istiod uninstall-istioGateway uninstall-addons extract-label
+install: setup install-CRDs install-istiod install-istioIngressGateway install-istioEngressGateway install-addons inject-label
+uninstall: setup uninstall-CRDs uninstall-istiod uninstall-istioIngressGateway uninstall-istioEngressGateway uninstall-addons extract-label
