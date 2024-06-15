@@ -1,12 +1,14 @@
+NAMESPACE ?= default
+
 setup:
 	helm repo add istio https://istio-release.storage.googleapis.com/charts
-	helm repo update
+	helm repo update istio
 
 install-CRDs:
 	echo "Install Istio CRDs"
 	helm upgrade istio-base istio/base \
-		-n istio-system --create-namespace \
 		--set defaultRevision=default \
+		-n istio-system --create-namespace \
 		--install --wait
 
 uninstall-CRDs:
@@ -15,22 +17,93 @@ uninstall-CRDs:
 
 install-istiod:
 	echo "Install istiod"
-	helm upgrade istiod istio/istiod -n istio-system \
-    	--wait --install
+	helm upgrade istiod istio/istiod \
+    	-n istio-system --create-namespace \
+		--install --wait
 
 uninstall-istiod:
 	echo "Uninstall istiod"
 	helm uninstall istiod -n istio-system
 
 install-istioGateway:
-	echo "Install IstioIngressGateway"
-	helm upgrade istio-ingressgateway istio/gateway -n istio-ingress --create-namespace \
+	echo "Install IstioGateway"
+	helm upgrade istio-ingress istio/gateway \
+		-n istio-system --create-namespace \
     	--install
 
 uninstall-istioGateway:
-	echo "Uninstall IstioIngressGateway"
-	helm uninstall istio-ingressgateway -n istio-ingress
+	echo "Uninstall IstioGateway"
+	helm uninstall istio-ingress -n istio-system
 
-install: setup install-CRDs install-istiod install-istioGateway
+setup-kiali:
+	helm repo add kiali https://kiali.org/helm-charts
+	helm repo update kiali
 
-uninstall: setup uninstall-CRDs uninstall-istiod uninstall-istioGateway
+install-kiali: setup-kiali
+	helm upgrade \
+		--set cr.create=true \
+		--set cr.namespace=istio-system \
+		--set cr.spec.auth.strategy="anonymous" \
+		--set cr.spec.external_services.prometheus.url="http://prometheus-server.istio-system/" \
+		--set cr.spec.external_services.grafana.in_cluster_url="http://grafana.istio-system/" \
+		--set cr.spec.external_services.tracing.use_grpc=true \
+		--set cr.spec.external_services.tracing.in_cluster_url="http://tracing.istio-system/jaeger" \
+		# --set cr.spec.external_services.istio.component_status.components[0].app_label="istio-ingress" \
+		# --set cr.spec.external_services.istio.component_status.components[0].is_core=true \
+		# --set cr.spec.external_services.istio.component_status.components[0].is_proxy=true \
+		-n kiali-operator --create-namespace \
+		kiali-operator kiali/kiali-operator \
+		--wait --install
+
+uninstall-kiali: setup-kiali
+	helm uninstall kiali-operator -n kiali-operator
+
+setup-monitoring:
+	helm repo add grafana https://grafana.github.io/helm-charts
+	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+	helm repo update grafana prometheus-community
+
+install-grafana: setup-monitoring
+	helm upgrade grafana grafana/grafana \
+		-n istio-system --create-namespace \
+		--install --wait
+
+uninstall-grafana: setup-monitoring
+	helm uninstall grafana -n istio-system
+
+install-prometheus: setup-monitoring
+	helm upgrade prometheus prometheus-community/prometheus \
+		-n istio-system --create-namespace \
+		--install
+
+uninstall-prometheus: setup-monitoring
+	helm uninstall prometheus -n istio-system
+
+install-jaegertracing: setup-monitoring
+	kubectl apply -n istio-system -f jaeger
+
+uninstall-jaegertracing: setup-monitoring
+	kubectl delete -n istio-system -f jaeger
+
+LABEL_KEY ?= istio-injection
+LABEL_VALUE ?= enabled
+inject-label:
+	echo "Before"
+	kubectl describe ns ${NAMESPACE}
+
+	kubectl label ns ${NAMESPACE} ${LABEL_KEY}=${LABEL_VALUE} --overwrite
+
+	echo "After"
+	kubectl describe ns ${NAMESPACE}
+
+extract-label:
+	echo "Before"
+	kubectl describe ns ${NAMESPACE}
+
+	kubectl label ns ${NAMESPACE} ${LABEL_KEY}-
+
+	echo "After"
+	kubectl describe ns ${NAMESPACE}
+
+install: setup install-CRDs install-istiod install-istioGateway install-kiali install-grafana install-prometheus
+uninstall: setup uninstall-CRDs uninstall-istiod uninstall-istioGateway uninstall-kiali uninstall-grafana uninstall-prometheus
