@@ -3,6 +3,7 @@ NAMESPACE ?= default
 setup:
 	helm repo add istio https://istio-release.storage.googleapis.com/charts
 	helm repo update istio
+	git submodule update --init
 
 install-CRDs:
 	echo "Install Istio CRDs"
