@@ -61,9 +61,6 @@ install-kiali: setup-kiali
 		--set cr.spec.external_services.grafana.in_cluster_url="http://grafana.istio-system/" \
 		--set cr.spec.external_services.tracing.use_grpc=true \
 		--set cr.spec.external_services.tracing.in_cluster_url="http://tracing.istio-system/jaeger" \
-		# --set cr.spec.external_services.istio.component_status.components[0].app_label="istio-ingress" \
-		# --set cr.spec.external_services.istio.component_status.components[0].is_core=true \
-		# --set cr.spec.external_services.istio.component_status.components[0].is_proxy=true \
 		-n kiali-operator --create-namespace \
 		kiali-operator kiali/kiali-operator \
 		--wait --install
