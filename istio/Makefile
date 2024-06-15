@@ -115,5 +115,5 @@ extract-label:
 	echo "After"
 	kubectl describe ns ${NAMESPACE}
 
-install: setup install-CRDs install-istiod install-istioGateway install-addons
-uninstall: setup uninstall-CRDs uninstall-istiod uninstall-istioGateway uninstall-addons
+install: setup install-CRDs install-istiod install-istioGateway install-addons inject-label
+uninstall: setup uninstall-CRDs uninstall-istiod uninstall-istioGateway uninstall-addons extract-label
