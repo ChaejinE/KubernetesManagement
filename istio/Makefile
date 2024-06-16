@@ -26,6 +26,15 @@ uninstall-istiod:
 	echo "Uninstall istiod"
 	helm uninstall istiod -n istio-system
 
+install-istio-operator:
+	helm upgrade istio-operator istio/manifests/charts/istio-operator \
+		--set watchedNamespaces="istio-system\,default" \
+		-n istio-system --create-namespace \
+		--install
+
+uninstall-istio-operator:
+	helm uninstall istio-operator -n istio-system
+
 install-istioIngressGateway:
 	echo "Install istioIngressGateway"
 	helm upgrade istio-ingressgateway istio/manifests/charts/gateways/istio-ingress \
@@ -34,7 +43,7 @@ install-istioIngressGateway:
 
 uninstall-istioIngressGateway:
 	echo "Uninstall istioIngressGateway"
-	helm uninstall istio-ingress -n istio-system
+	helm uninstall istio-ingressgateway -n istio-system
 
 install-istioEgressGateway:
 	echo "Install istioEgressGateway"
@@ -63,16 +72,8 @@ setup-kiali:
 	helm repo update kiali
 
 install-kiali: setup-kiali
-	helm upgrade \
-		--set cr.create=true \
-		--set cr.namespace=istio-system \
-		--set cr.spec.auth.strategy="anonymous" \
-		--set cr.spec.external_services.prometheus.url="http://prometheus-server.istio-system/" \
-		--set cr.spec.external_services.grafana.in_cluster_url="http://grafana.istio-system/" \
-		--set cr.spec.external_services.tracing.use_grpc=true \
-		--set cr.spec.external_services.tracing.in_cluster_url="http://tracing.istio-system/jaeger" \
+	helm upgrade kiali-operator kiali/kiali-operator \
 		-n kiali-operator --create-namespace \
-		kiali-operator kiali/kiali-operator \
 		--wait --install
 
 uninstall-kiali: setup-kiali
@@ -83,27 +84,35 @@ setup-monitoring:
 	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 	helm repo update grafana prometheus-community
 
-install-grafana: setup-monitoring
-	helm upgrade grafana grafana/grafana \
-		-n istio-system --create-namespace \
-		--install --wait
+install-grafana:
+	VERSION=1.22; \
+	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/grafana.yaml; \
+	kubectl apply -f $${PROMETHEUS_ADDON} -n istio-system
 
-uninstall-grafana: setup-monitoring
-	helm uninstall grafana -n istio-system
+uninstall-grafana:
+	VERSION=1.22; \
+	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/grafana.yaml; \
+	kubectl delete -f $${PROMETHEUS_ADDON} -n istio-system
 
-install-prometheus: setup-monitoring
-	helm upgrade prometheus prometheus-community/prometheus \
-		-n istio-system --create-namespace \
-		--install
+install-prometheus:
+	VERSION=1.22; \
+	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/prometheus.yaml; \
+	kubectl apply -f $${PROMETHEUS_ADDON} -n istio-system
 
-uninstall-prometheus: setup-monitoring
-	helm uninstall prometheus -n istio-system
+uninstall-prometheus:
+	VERSION=1.22; \
+	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/prometheus.yaml; \
+	kubectl delete -f $${PROMETHEUS_ADDON} -n istio-system
 
-install-jaegertracing: setup-monitoring
-	kubectl apply -n istio-system -f jaeger
+install-jaeger:
+	VERSION=1.22; \
+	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/jaeger.yaml; \
+	kubectl apply -f $${PROMETHEUS_ADDON} -n istio-system
 
-uninstall-jaegertracing: setup-monitoring
-	kubectl delete -n istio-system -f jaeger
+uninstall-jaeger:
+	VERSION=1.22; \
+	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/jaeger.yaml; \
+	kubectl delete -f $${PROMETHEUS_ADDON} -n istio-system
 
 LABEL_KEY ?= istio-injection
 LABEL_VALUE ?= enabled
@@ -125,5 +134,5 @@ extract-label:
 	echo "After"
 	kubectl describe ns ${NAMESPACE}
 
-install: setup install-CRDs install-istiod install-istioIngressGateway install-istioEngressGateway install-addons inject-label
-uninstall: setup uninstall-CRDs uninstall-istiod uninstall-istioIngressGateway uninstall-istioEngressGateway uninstall-addons extract-label
+install: install-istio-operator install-addons inject-label
+uninstall: uninstall-istio-operator uninstall-addons extract-label
