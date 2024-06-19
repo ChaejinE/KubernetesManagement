@@ -1,6 +1,7 @@
 NAMESPACE ?= default
 
-setup:
+# Only Using Istio docs
+setup-istio:
 	helm repo add istio https://istio-release.storage.googleapis.com/charts
 	helm repo update istio
 	git submodule update --init
@@ -25,15 +26,6 @@ install-istiod:
 uninstall-istiod:
 	echo "Uninstall istiod"
 	helm uninstall istiod -n istio-system
-
-install-istio-operator:
-	helm upgrade istio-operator istio/manifests/charts/istio-operator \
-		--set watchedNamespaces="istio-system\,default" \
-		-n istio-system --create-namespace \
-		--install
-
-uninstall-istio-operator:
-	helm uninstall istio-operator -n istio-system
 
 install-istioIngressGateway:
 	echo "Install istioIngressGateway"
@@ -67,23 +59,6 @@ uninstall-addons:
 	kubectl delete -f istio/samples/addons/jaeger.yaml -n istio-system
 	kubectl delete -f istio/samples/addons/kiali.yaml -n istio-system
 
-setup-kiali:
-	helm repo add kiali https://kiali.org/helm-charts
-	helm repo update kiali
-
-install-kiali: setup-kiali
-	helm upgrade kiali-operator kiali/kiali-operator \
-		-n kiali-operator --create-namespace \
-		--wait --install
-
-uninstall-kiali: setup-kiali
-	helm uninstall kiali-operator -n kiali-operator
-
-setup-monitoring:
-	helm repo add grafana https://grafana.github.io/helm-charts
-	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-	helm repo update grafana prometheus-community
-
 install-grafana:
 	VERSION=1.22; \
 	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/grafana.yaml; \
@@ -104,23 +79,41 @@ uninstall-prometheus:
 	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/prometheus.yaml; \
 	kubectl delete -f $${PROMETHEUS_ADDON} -n istio-system
 
+# Using Seperated Components
+
+setup-istio-operator:
+	git submodule update --init
+
+install-istio-operator: setup-istio-operator
+	helm upgrade istio-operator istio/manifests/charts/istio-operator \
+		--set watchedNamespaces="istio-system\,default" \
+		-n istio-system --create-namespace \
+		--install
+
+uninstall-istio-operator: setup-istio-operator
+	helm uninstall istio-operator -n istio-system
+
+setup-kiali:
+	helm repo add kiali https://kiali.org/helm-charts
+	helm repo update kiali
+
+install-kiali-operator: setup-kiali
+	helm upgrade kiali-operator kiali/kiali-operator \
+		-n kiali-operator --create-namespace \
+		--wait --install
+
+uninstall-kiali-operator: setup-kiali
+	helm uninstall kiali-operator -n kiali-operator
+
 install-certmanager:
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.6.3/cert-manager.yaml
 
-install-jaeger:
-	# VERSION=1.22; \
-	# PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/jaeger.yaml; \
-	# kubectl apply -f $${PROMETHEUS_ADDON} -n istio-system
+install-jaeger-operator:
 	kubectl create namespace observability || true
-	kubectl create -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.57.0/jaeger-operator.yaml -n observability
+	kubectl apply -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.57.0/jaeger-operator.yaml -n observability
 
-uninstall-jaeger:
+uninstall-jaeger-operator:
 	kubectl delete -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.57.0/jaeger-operator.yaml -n observability
-
-# uninstall-jaeger:
-# 	VERSION=1.22; \
-# 	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/jaeger.yaml; \
-# 	kubectl delete -f $${PROMETHEUS_ADDON} -n istio-system
 
 LABEL_KEY ?= istio-injection
 LABEL_VALUE ?= enabled
