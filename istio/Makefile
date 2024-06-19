@@ -104,15 +104,23 @@ uninstall-prometheus:
 	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/prometheus.yaml; \
 	kubectl delete -f $${PROMETHEUS_ADDON} -n istio-system
 
+install-certmanager:
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.6.3/cert-manager.yaml
+
 install-jaeger:
-	VERSION=1.22; \
-	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/jaeger.yaml; \
-	kubectl apply -f $${PROMETHEUS_ADDON} -n istio-system
+	# VERSION=1.22; \
+	# PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/jaeger.yaml; \
+	# kubectl apply -f $${PROMETHEUS_ADDON} -n istio-system
+	kubectl create namespace observability || true
+	kubectl create -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.57.0/jaeger-operator.yaml -n observability
 
 uninstall-jaeger:
-	VERSION=1.22; \
-	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/jaeger.yaml; \
-	kubectl delete -f $${PROMETHEUS_ADDON} -n istio-system
+	kubectl delete -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.57.0/jaeger-operator.yaml -n observability
+
+# uninstall-jaeger:
+# 	VERSION=1.22; \
+# 	PROMETHEUS_ADDON=https://raw.githubusercontent.com/istio/istio/release-$${VERSION}/samples/addons/jaeger.yaml; \
+# 	kubectl delete -f $${PROMETHEUS_ADDON} -n istio-system
 
 LABEL_KEY ?= istio-injection
 LABEL_VALUE ?= enabled
@@ -130,6 +138,26 @@ extract-label:
 	kubectl describe ns ${NAMESPACE}
 
 	kubectl label ns ${NAMESPACE} ${LABEL_KEY}-
+
+	echo "After"
+	kubectl describe ns ${NAMESPACE}
+
+ANNO_KEY ?= sidecar.jaegertracing.io/inject
+ANNO_VALUE ?= true
+inject-annotaion:
+	echo "Before"
+	kubectl describe ns ${NAMESPACE}
+
+	kubectl annotate ns ${NAMESPACE} ${ANNO_KEY}=${ANNO_VALUE} --overwrite
+
+	echo "After"
+	kubectl describe ns ${NAMESPACE}
+
+extract-annotaion:
+	echo "Before"
+	kubectl describe ns ${NAMESPACE}
+
+	kubectl annotate ns ${NAMESPACE} ${ANNO_KEY}-
 
 	echo "After"
 	kubectl describe ns ${NAMESPACE}
