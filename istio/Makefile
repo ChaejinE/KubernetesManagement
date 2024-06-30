@@ -93,6 +93,12 @@ install-istio-operator: setup-istio-operator
 uninstall-istio-operator: setup-istio-operator
 	helm uninstall istio-operator -n istio-system
 
+apply-istio-operator:
+	kubectl apply -f istio-operator.yaml
+
+delete-istio-operator:
+	kubectl delete -f istio-operator.yaml
+
 setup-kiali:
 	helm repo add kiali https://kiali.org/helm-charts
 	helm repo update kiali
@@ -105,15 +111,27 @@ install-kiali-operator: setup-kiali
 uninstall-kiali-operator: setup-kiali
 	helm uninstall kiali-operator -n kiali-operator
 
+apply-kiali:
+	kubectl apply -f kiali.yaml
+
+delete-kiali:
+	kubectl delete -f kiali.yaml
+
 install-certmanager:
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.6.3/cert-manager.yaml
 
-install-jaeger-operator:
+install-jaeger-operator: install-certmanager
 	kubectl create namespace observability || true
 	kubectl apply -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.57.0/jaeger-operator.yaml -n observability
 
 uninstall-jaeger-operator:
 	kubectl delete -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.57.0/jaeger-operator.yaml -n observability
+
+apply-jaeger:
+	kubectl apply -f jaeger.yaml
+
+delete-jaeger:
+	kubectl delete -f jaeger.yaml
 
 LABEL_KEY ?= istio-injection
 LABEL_VALUE ?= enabled
@@ -155,5 +173,5 @@ extract-annotaion:
 	echo "After"
 	kubectl describe ns ${NAMESPACE}
 
-install: install-istio-operator install-addons inject-label
-uninstall: uninstall-istio-operator uninstall-addons extract-label
+install: install-istio-operator apply-istio-operator install-kiali-operator apply-kiali install-jaeger-operator apply-jaeger inject-label install-grafana install-prometheus
+uninstall: delete-istio-operator uninstall-istio-operator delete-kiali uninstall-kiali-operator delete-jaeger uninstall-jaeger-operator extract-label uninstall-grafana uninstall-prometheus
